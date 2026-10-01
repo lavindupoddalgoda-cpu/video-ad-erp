@@ -1,0 +1,17 @@
+{
+  "name": "mini-erp",
+  "version": "1.0.0",
+  "description": "Mini-ERP: video orders and finance, Express + Supabase on Vercel",
+  "main": "api/index.js",
+  "scripts": {
+    "start": "node dev.js",
+    "dev": "node dev.js"
+  },
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
+  }
+}

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mini-ERP · Video Orders & Finance</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<style type="text/tailwindcss">
+@layer components{
+ .panel{@apply rounded-xl border border-slate-200 bg-white p-5 shadow-sm}
+ .kl{@apply flex items-center gap-2 text-sm text-slate-500}
+ .kv{@apply text-2xl font-bold mt-2 tabular-nums text-slate-900}
+ .ks{@apply text-xs text-slate-500 mt-1}
+ .h2{@apply flex items-center gap-2 font-semibold text-base mb-4}
+ .lbl{@apply block text-xs font-medium text-slate-600 mb-1}
+ .inp{@apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500}
+ .btn{@apply inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm hover:bg-slate-100}
+ .btn-p{@apply rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-3 py-2 text-sm}
+}
+</style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen" style="font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif">
+
+<header class="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur">
+  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
+    <i data-lucide="clapperboard" class="text-emerald-600"></i>
+    <h1 class="font-semibold text-lg">Mini-ERP</h1>
+    <div class="ml-auto flex gap-2">
+      <button onclick="openSettings()" class="btn"><i data-lucide="settings-2" class="w-4 h-4"></i>Financial settings</button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+  <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="panel"><div class="kl"><i data-lucide="megaphone" class="w-4 h-4 text-sky-600"></i>Available ad budget pool</div><div id="kAd" class="kv">–</div><div id="kAdS" class="ks"></div></div>
+    <div class="panel"><div class="kl"><i data-lucide="shield-check" class="w-4 h-4 text-violet-600"></i>Ad safety buffer</div><div id="kBuf" class="kv">–</div><div id="kBufS" class="ks"></div></div>
+    <div class="panel"><div class="kl"><i data-lucide="hourglass" class="w-4 h-4 text-amber-600"></i>Pending final payments</div><div id="kAr" class="kv">–</div><div id="kArS" class="ks"></div></div>
+    <div class="panel"><div class="kl"><i data-lucide="trending-up" class="w-4 h-4 text-emerald-600"></i>Net profit</div><div id="kNp" class="kv">–</div><div id="kNpS" class="ks"></div></div>
+  </section>
+
+  <div class="grid lg:grid-cols-3 gap-6">
+    <section class="panel h-fit">
+      <h2 class="h2"><i data-lucide="plus-circle" class="w-5 h-5 text-emerald-600"></i>New order</h2>
+      <div class="space-y-3">
+        <div><label class="lbl">Client name</label><input id="oName" class="inp" placeholder="e.g. Nimal Perera"></div>
+        <div><label class="lbl">Order date</label><input id="oDate" type="date" class="inp"></div>
+        <div><label class="lbl">Notes</label><textarea id="oNotes" rows="3" class="inp" placeholder="Video type, deadline, links"></textarea></div>
+        <button onclick="addOrder()" class="btn-p w-full py-2.5">Add order</button>
+        <p id="advHint" class="text-xs text-slate-500"></p>
+      </div>
+    </section>
+
+    <section class="panel lg:col-span-2">
+      <h2 class="h2"><i data-lucide="pie-chart" class="w-5 h-5 text-emerald-600"></i>Reinvestment & reports</h2>
+      <div class="grid sm:grid-cols-2 gap-4 mb-5">
+        <div class="rounded-lg bg-sky-50 p-4"><div class="text-sm text-sky-700 font-medium">Recommended daily ad budget</div><div id="rDaily" class="text-2xl font-bold mt-1">–</div><div id="rDailyS" class="text-xs text-slate-600 mt-1"></div></div>
+        <div class="rounded-lg bg-emerald-50 p-4"><div class="text-sm text-emerald-700 font-medium">Break-even</div><div id="rBe" class="text-2xl font-bold mt-1">–</div><div id="rBeS" class="text-xs text-slate-600 mt-1"></div></div>
+      </div>
+      <div id="chart" class="space-y-3"></div>
+      <div id="statusSum" class="flex flex-wrap gap-2 mt-5"></div>
+    </section>
+  </div>
+
+  <section class="panel">
+    <div class="flex flex-col sm:flex-row gap-3 sm:items-center mb-4">
+      <h2 class="h2 mb-0"><i data-lucide="list-checks" class="w-5 h-5 text-emerald-600"></i>Orders</h2>
+      <div class="sm:ml-auto flex gap-2">
+        <input id="q" oninput="render()" class="inp sm:w-56" placeholder="Search client or notes">
+        <select id="f" onchange="render()" class="inp w-auto"><option value="all">All</option></select>
+      </div>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm min-w-[640px]">
+        <thead><tr class="text-left text-slate-500 border-b border-slate-200"><th class="py-2 pr-3">Client</th><th class="pr-3">Date</th><th class="pr-3">Notes</th><th class="pr-3">Status</th><th class="pr-3 text-right">Received</th><th></th></tr></thead>
+        <tbody id="tb"></tbody>
+      </table>
+    </div>
+    <p id="empty" class="hidden text-center text-slate-500 py-8">No orders yet. Add your first order using the form.</p>
+  </section>
+</main>
+
+<div id="sM" class="hidden fixed inset-0 z-40 bg-slate-900/40 flex items-center justify-center p-4">
+  <div class="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-xl bg-white border border-slate-200 p-5 shadow-xl">
+    <h3 class="h2"><i data-lucide="settings-2" class="w-5 h-5 text-emerald-600"></i>Financial settings</h3>
+    <p class="text-xs text-slate-500 mb-4">Every value is editable. The advance split must add up to the advance, and advance + final payment must equal the selling price. New orders use these values; existing orders keep the values they were created with. Fixed costs apply to all months' reports immediately.</p>
+    <div id="sFields" class="grid sm:grid-cols-2 gap-3"></div>
+    <p id="sCheck" class="text-xs mt-3"></p>
+    <div class="flex justify-end gap-2 mt-5"><button class="btn" onclick="$('sM').classList.add('hidden')">Cancel</button><button class="btn-p" onclick="saveSettings()">Save settings</button></div>
+  </div>
+</div>
+<div id="toast" class="fixed bottom-4 left-1/2 -translate-x-1/2 hidden px-4 py-2 rounded-lg bg-slate-900 text-white text-sm shadow-lg z-50 max-w-[90vw]"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const fmt = n => 'LKR ' + Math.round(n || 0).toLocaleString('en-US');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const today = () => new Date().toISOString().slice(0, 10);
+const toast = m => { const t = $('toast'); t.textContent = m; t.classList.remove('hidden'); clearTimeout(t._t); t._t = setTimeout(() => t.classList.add('hidden'), 3500); };
+
+const STATUS = {
+  advance: ['Advance received', 'bg-sky-100 text-sky-800'],
+  progress: ['In progress', 'bg-violet-100 text-violet-800'],
+  sent: ['Video sent / pending final payment', 'bg-amber-100 text-amber-800'],
+  paid: ['Completed & paid', 'bg-emerald-100 text-emerald-800'],
+};
+const FIELDS = [
+  ['price', 'Selling price per video'], ['advance', 'Advance payment'],
+  ['adBudget', 'Advance → Ad budget pool'], ['production', 'Advance → Production expenses'],
+  ['buffer', 'Advance → Ad safety buffer'], ['finalPayment', 'Final payment → Revenue vault'],
+  ['salaries', 'Monthly employee salaries'], ['software', 'Monthly software / tools'],
+  ['otherCosts', 'Other fixed operating costs'],
+];
+
+let orders = [], settings = {}, sm = {};
+let key = localStorage.getItem('erp_key') || '';
+
+async function api(path, opt = {}) {
+  const r = await fetch('/api' + path, {
+    ...opt,
+    headers: { 'Content-Type': 'application/json', 'x-api-key': key },
+    body: opt.body ? JSON.stringify(opt.body) : undefined,
+  });
+  if (r.status === 401) {
+    const k = prompt('Enter access key');
+    if (!k) throw new Error('Access key required');
+    key = k; localStorage.setItem('erp_key', k);
+    return api(path, opt);
+  }
+  if (r.status === 204) return null;
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || r.statusText);
+  return d;
+}
+const run = async fn => { try { await fn(); } catch (e) { toast(e.message); } };
+
+async function load() {
+  [orders, settings, sm] = await Promise.all([api('/orders'), api('/settings'), api('/summary')]);
+  render();
+}
+
+function render() {
+  $('kAd').textContent = fmt(sm.adPool);
+  $('kAdS').textContent = `${fmt(settings.adBudget)} per order advance`;
+  $('kBuf').textContent = fmt(sm.safetyBuffer);
+  $('kBufS').textContent = `${fmt(settings.buffer)} per order advance`;
+  $('kAr').textContent = fmt(sm.pendingReceivable);
+  $('kArS').textContent = `${sm.openOrders || 0} active order(s) awaiting final payment`;
+  $('kNp').textContent = fmt(sm.netProfit);
+  $('kNp').className = 'kv ' + (sm.netProfit < 0 ? '!text-rose-600' : '!text-emerald-600');
+  $('kNpS').textContent = `Final payments ${fmt(sm.revenueVault)} − fixed costs ${fmt(sm.fixedCosts)}`;
+  $('advHint').textContent = `Each new order records an advance of ${fmt(settings.advance)}.`;
+
+  $('rDaily').textContent = fmt(sm.recommendedDailyAd) + ' / day';
+  $('rDailyS').textContent = sm.recentOrders
+    ? `${sm.recentOrders} order(s) in the last 3 days · ${fmt(sm.recentAdvances)} advances · ad share ÷ 3`
+    : 'No advances collected in the last 3 days';
+  const left = Math.max(0, sm.breakEvenOrders - sm.paidOrders);
+  $('rBe').textContent = sm.fixedCosts ? (left ? `${left} more paid order(s)` : 'Reached') : 'No fixed costs';
+  $('rBeS').textContent = `${fmt(sm.fixedCosts)} ÷ ${fmt(settings.finalPayment)} = ${sm.breakEvenOrders} paid orders per month (${sm.paidOrders || 0} done)`;
+
+  const rows = [
+    ['Ad budget pool', sm.adPool, 'bg-sky-500'], ['Ad safety buffer', sm.safetyBuffer, 'bg-violet-500'],
+    ['Production expenses', sm.productionExpenses, 'bg-amber-500'], ['General revenue vault', sm.revenueVault, 'bg-emerald-500'],
+    ['Fixed costs (monthly)', sm.fixedCosts, 'bg-rose-500'],
+  ];
+  const max = Math.max(...rows.map(r => r[1] || 0), 1);
+  $('chart').innerHTML = rows.map(([l, v, c]) => `<div><div class="flex justify-between text-xs mb-1"><span>${l}</span><span class="tabular-nums">${fmt(v)}</span></div><div class="h-2.5 rounded-full bg-slate-200"><div class="h-full rounded-full ${c}" style="width:${(v || 0) / max * 100}%"></div></div></div>`).join('');
+  $('statusSum').innerHTML = Object.entries(STATUS).map(([k, [l, c]]) => `<span class="text-xs px-2.5 py-1 rounded-full ${c}">${l}: ${(sm.counts || {})[k] || 0}</span>`).join('');
+
+  const q = $('q').value.toLowerCase(), f = $('f').value;
+  const list = orders.filter(o => (f === 'all' || o.status === f) && (o.client + ' ' + (o.notes || '')).toLowerCase().includes(q));
+  $('empty').classList.toggle('hidden', list.length > 0);
+  $('tb').innerHTML = list.map(o => `<tr class="border-b border-slate-100 align-top">
+    <td class="py-3 pr-3 font-medium">${esc(o.client)}</td>
+    <td class="pr-3 whitespace-nowrap">${esc(o.order_date)}</td>
+    <td class="pr-3 max-w-[220px] truncate text-slate-500" title="${esc(o.notes)}">${esc(o.notes) || '—'}</td>
+    <td class="pr-3"><select onchange="setStatus('${o.id}',this.value)" class="inp !py-1.5 ${STATUS[o.status][1]}">${Object.entries(STATUS).map(([k, [l]]) => `<option value="${k}" ${k === o.status ? 'selected' : ''}>${l}</option>`).join('')}</select></td>
+    <td class="pr-3 text-right tabular-nums">${fmt(o.terms.advance + (o.status === 'paid' ? o.terms.finalPayment : 0))}</td>
+    <td class="text-right"><button onclick="delOrder('${o.id}')" class="p-1.5 rounded hover:bg-rose-100 text-rose-600" aria-label="Delete order"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td></tr>`).join('');
+  lucide.createIcons();
+}
+
+function addOrder() { run(async () => {
+  await api('/orders', { method: 'POST', body: { client: $('oName').value, order_date: $('oDate').value || today(), notes: $('oNotes').value } });
+  $('oName').value = ''; $('oNotes').value = ''; $('oDate').value = today();
+  await load(); toast('Order added · advance split applied');
+}); }
+function setStatus(id, status) { run(async () => { await api('/orders/' + id, { method: 'PATCH', body: { status } }); await load(); if (status === 'paid') toast('Final payment added to revenue vault'); }); }
+function delOrder(id) { if (confirm('Delete this order? Its allocations will be removed from totals.')) run(async () => { await api('/orders/' + id, { method: 'DELETE' }); await load(); }); }
+
+function openSettings() {
+  $('sFields').innerHTML = FIELDS.map(([k, l]) => `<div><label class="lbl">${l} (LKR)</label><input id="s_${k}" type="number" min="0" class="inp" value="${settings[k]}" oninput="checkSplit()"></div>`).join('');
+  checkSplit(); $('sM').classList.remove('hidden');
+}
+const sv = k => Number($('s_' + k).value);
+function checkSplit() {
+  const a = sv('adBudget') + sv('production') + sv('buffer') === sv('advance');
+  const b = sv('advance') + sv('finalPayment') === sv('price');
+  $('sCheck').className = 'text-xs mt-3 ' + (a && b ? 'text-emerald-700' : 'text-rose-600');
+  $('sCheck').textContent = a && b ? 'Splits add up.' :
+    [!a && `Advance split totals ${fmt(sv('adBudget') + sv('production') + sv('buffer'))}, advance is ${fmt(sv('advance'))}.`,
+     !b && `Advance + final totals ${fmt(sv('advance') + sv('finalPayment'))}, price is ${fmt(sv('price'))}.`].filter(Boolean).join(' ');
+}
+function saveSettings() { run(async () => {
+  await api('/settings', { method: 'PUT', body: Object.fromEntries(FIELDS.map(([k]) => [k, sv(k)])) });
+  $('sM').classList.add('hidden'); await load(); toast('Settings saved');
+}); }
+
+$('f').innerHTML += Object.entries(STATUS).map(([k, [l]]) => `<option value="${k}">${l}</option>`).join('');
+$('oDate').value = today();
+lucide.createIcons();
+run(load);
+</script>
+</body>
+</html>
