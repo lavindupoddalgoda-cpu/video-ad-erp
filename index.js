@@ -7,9 +7,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
-  auth: { persistSession: false },
-});
+const sb = process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY
+  ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false } })
+  : null;
 
 // ---------- Business rules (all editable through /api/settings) ----------
 const DEFAULTS = {
@@ -27,6 +27,11 @@ const STATUSES = ['advance', 'progress', 'sent', 'paid'];
 
 const wrap = (fn) => (req, res) =>
   fn(req, res).catch((e) => res.status(500).json({ error: e.message }));
+
+app.use('/api', (req, res, next) => {
+  if (!sb) return res.status(500).json({ error: 'Server is missing SUPABASE_URL or SUPABASE_SERVICE_KEY environment variables' });
+  next();
+});
 
 // Optional access key
 app.use('/api', (req, res, next) => {
@@ -90,6 +95,7 @@ app.post('/api/orders', wrap(async (req, res) => {
 app.patch('/api/orders/:id', wrap(async (req, res) => {
   const patch = {};
   for (const k of ['client', 'notes', 'order_date', 'status']) if (k in req.body) patch[k] = req.body[k];
+  if (!Object.keys(patch).length) return res.status(400).json({ error: 'Nothing to update' });
   if ('status' in patch && !STATUSES.includes(patch.status))
     return res.status(400).json({ error: 'Invalid status' });
   const { data, error } = await sb.from('orders').update(patch).eq('id', req.params.id).select().maybeSingle();
@@ -111,7 +117,8 @@ app.get('/api/summary', wrap(async (req, res) => {
   const sum = (arr, f) => arr.reduce((a, o) => a + f(o), 0);
   const open = orders.filter((o) => o.status !== 'paid');
   const paid = orders.filter((o) => o.status === 'paid');
-  const cutoff = new Date(Date.now() - 2 * 864e5).toISOString().slice(0, 10);
+  const t = /^\d{4}-\d{2}-\d{2}$/.test((req.query && req.query.today) || '') ? req.query.today : new Date().toISOString().slice(0, 10);
+  const cutoff = new Date(Date.parse(t) - 2 * 864e5).toISOString().slice(0, 10);
   const recent = orders.filter((o) => o.order_date >= cutoff);
   const fixedCosts = s.salaries + s.software + s.otherCosts;
   const revenueVault = sum(paid, (o) => o.terms.finalPayment);

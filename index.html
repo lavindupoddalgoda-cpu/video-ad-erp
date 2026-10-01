@@ -96,7 +96,7 @@
 const $ = id => document.getElementById(id);
 const fmt = n => 'LKR ' + Math.round(n || 0).toLocaleString('en-US');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); }; // local date, not UTC
 const toast = m => { const t = $('toast'); t.textContent = m; t.classList.remove('hidden'); clearTimeout(t._t); t._t = setTimeout(() => t.classList.add('hidden'), 3500); };
 
 const STATUS = {
@@ -136,7 +136,7 @@ async function api(path, opt = {}) {
 const run = async fn => { try { await fn(); } catch (e) { toast(e.message); } };
 
 async function load() {
-  [orders, settings, sm] = await Promise.all([api('/orders'), api('/settings'), api('/summary')]);
+  [orders, settings, sm] = await Promise.all([api('/orders'), api('/settings'), api('/summary?today=' + today())]);
   render();
 }
 
